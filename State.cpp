@@ -2,16 +2,16 @@
 
 // Default constructor
 State::State(){
-    srand();
-
     reward = 0;
-    value  = double( rand() / RAND_MAX ) + 1;
+    value  = 0;
+    index = 0;
 }
 
 // Initializing constructor
-State::State(double r, double v) {
+State::State(double r, double v, int i) {
     reward = r;
     value  = v;
+    index = i;
 }
 
 
@@ -23,6 +23,9 @@ double State::getReward() { return reward; }
 // Get value
 double State::getValue() { return value; }
 
+// Get index location
+int State::isAt() { return index; }
+
 
 // Accessor Methods
 
@@ -31,3 +34,6 @@ void State::setReward(double r) { reward = r; }
 
 // Set reward
 void State::setValue(double v) { value = v; }
+
+// Set index location
+void State::isAt(int i) { index = i; }
