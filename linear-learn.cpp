@@ -36,6 +36,8 @@ vector<State> world;
 int worldSize;
 double alpha;
 double discount;
+double lambda;
+double epsilon;
 int numberOfRuns;
 
 int goalLocation;
@@ -61,6 +63,8 @@ unsigned int getRightLocation(int);
 // TD-learning Functions
 double V(int);
 double r(int);
+void updateAllEligibilites(State& currentState);
+void resetAllEligibilities();
 
 int main (int argc, char** argv) {
 
@@ -71,8 +75,8 @@ int main (int argc, char** argv) {
     if ( argc > 1 ) {
         getSettingsFromFile(argv[1]);
     } else {
-        worldSize = 64;
-        alpha = 0.5;
+        worldSize = 30;
+        alpha = 0.1;
         discount = 0.9;
     }
 
@@ -91,7 +95,7 @@ int main (int argc, char** argv) {
         double randomValue = valueDistribution(randomNumberGenerator);
 
         // Create a new state with random values and rewards, and add it to the world array
-        State newState(0, randomValue, i);
+        State newState(0, 0/*randomValue*/, i);
         world.push_back(newState);
 
         // Print state stats
@@ -127,8 +131,6 @@ int main (int argc, char** argv) {
         // Loop to control the movements until agent has reached the goal
         do {
 
-            //cout << "Agent Location: " << agentLocation << "\nGoal Location: " << goalLocation << "\n";
-
             // Set the previous state to the current state
             previousState = &world[agentLocation];
 
@@ -152,7 +154,9 @@ int main (int argc, char** argv) {
 
             //*************TD-Learning Starts Here***************
 
-            // Update previous state
+            // Update the eligibilities of all states and set current state eligibility to 1
+            updateAllEligibilites(*previousState);
+
             int s = previousState->isAt();
             int sPlus1 = agentLocation;
 
@@ -161,7 +165,13 @@ int main (int argc, char** argv) {
             //cout << "delta = ( " << r(s) << " + " << discount << " * " << V(sPlus1) <<  " ) - " << V(s) << "\n";
             //cout << "delta = " << TDError <<"\n";
 
-            previousState->setValue( previousState->getValue() + alpha * TDError );
+            // Update previous state
+            //previousState->setValue( previousState->getValue() + alpha * TDError );
+
+            // Update values of all eligible states
+            for (State& state : world) {
+                state.setValue( state.getValue() + alpha * TDError * state.getEligibility() );
+            }
 
             // If we have reached the goal, update the goal state
             if (agentLocation == goalLocation) {
@@ -190,6 +200,9 @@ int main (int argc, char** argv) {
             }
         } while ( agentLocation != goalLocation );
 
+        // End of episode: Reset the eligibilities
+        resetAllEligibilities();
+
         // Logging results
 
         //cout << "Episode " << i << "\nNumber of steps: " << numberOfSteps << "\n";
@@ -212,8 +225,9 @@ int main (int argc, char** argv) {
     }
 
     //*****Logging and data reporting********
-    
+
     averageNumberOfSteps /= numberOfRuns;
+
     cout << "Complete!\n"
         << "Number of Runs:\t\t\t" << numberOfRuns << "\n"
         << "Max Number of Steps:\t\t" << maxNumberOfSteps << "\n"
@@ -258,13 +272,13 @@ void getSettingsFromFile(string filename) {
     getline(fin, _);
 
     // Get the data from the input file
-    fin >> worldSize >> alpha >> discount >> numberOfRuns;
+    fin >> worldSize >> alpha >> discount >> lambda >> epsilon >> numberOfRuns;
 }
 
 // Decide what movement to make
 // MOVEMENT POLICY:
 //      If the values of two states are equal, choose left
-//      %10 of the time, choose randomly (epsilon soft policy)
+//      % epsilon of the time, choose randomly (epsilon soft policy)
 //      Agent MUST move
 Move chooseMovement(State leftState, State currentState, State rightState) {
 
@@ -277,9 +291,9 @@ Move chooseMovement(State leftState, State currentState, State rightState) {
     }
 
     // Set up epsilon soft policy
-    double epsilon = epsilonSoftDistribution(randomNumberGenerator);
+    double chanceOfRandomMovement = epsilonSoftDistribution(randomNumberGenerator);
 
-    if (epsilon < 0.1) {
+    if (chanceOfRandomMovement < epsilon) {
         //cout << "RANDOM MOVEMENT!\n";
         movement = randomMovement();
     }
@@ -340,4 +354,23 @@ double V(int state) {
 // Get the reward of a state
 double r(int state) {
     return world[state].getReward();
+}
+
+// Update the eligibilities of all states in the world and set current to 1
+void updateAllEligibilites(State& currentState) {
+
+    // Update all eligibilities
+    for (State& state : world) {
+        state.updateEligibility(lambda);
+    }
+
+    // Set current eligibility to 1
+    currentState.setEligibility();
+}
+
+// Reset all eligibilities of all states to 0
+void resetAllEligibilities() {
+    for (State& state : world) {
+        state.resetEligibility();
+    }
 }

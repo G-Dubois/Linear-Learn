@@ -12,6 +12,7 @@ private:
     // Data members
     double reward;
     double value;
+    double eligibility;
     int index;
 
 public:
@@ -23,12 +24,18 @@ public:
     // Accessor Methods
     double getReward();
     double getValue();
+    double getEligibility();
     int isAt();
 
     // Mutator Methods
     void setReward(double r);
     void setValue(double v);
+    void setEligibility();
     void isAt(int i);
+
+    // Eligibility Trace Methods
+    void resetEligibility();
+    void updateEligibility(double lambda);
 };
 
 #endif
